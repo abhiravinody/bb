@@ -104,7 +104,7 @@ function init() {
 
 function prepareMap(boarddim) {
     var map = [];
-    start = parseFloat(boarddim) * .03;
+    start = parseFloat(boarddim) * .06;
     end = parseFloat(boarddim) - start;
 
     console.log({ start: start, end: end });
@@ -212,6 +212,8 @@ function drawPlayers(ctx, map) {
     // fill the circle with the current fill color
     ctx.fill();
 
+
+    // Bakri
     ctx.fillStyle = "#581ED2";
     ctx.lineWidth = 3;
     var cout6 = 0;
@@ -268,8 +270,10 @@ function handleClick(event) {
     var y = event.clientY - data.canvas.offsetTop;
     console.log("Click at (" + x + "," + y + ")");
     var pos = findClickPos(x,y);
+    if(pos<0) return;
 
     drawMouseTracker(pos);
+    
 
     if(bagh.active){
         moveBagh(pos);
@@ -277,7 +281,7 @@ function handleClick(event) {
         moveBakri(pos);
     }
 
-    if(pos<0) return;
+    
     
 }
 
@@ -318,8 +322,8 @@ function drawMouseTracker(pos){
     ctx.stroke();
 }
 
-function moveBakri(){
-
+function moveBakri(pos){
+    if(action.pos1 = null) action.pos1=pos;
 }
 
 init();
