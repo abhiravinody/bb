@@ -52,33 +52,33 @@ function init() {
     canvasMouse.addEventListener("click", handleClick, false);
 
 
-    
 
-    var left = parseFloat(screenWidth - data.boarddim)/2.0;
-    var top = parseFloat(screenHeight - data.boarddim)/6.0;
-    
+
+    var left = parseFloat(screenWidth - data.boarddim) / 2.0;
+    var top = parseFloat(screenHeight - data.boarddim) / 6.0;
+
     canvas.style.position = "absolute";
-    canvas.style.left = left+"px";
-    canvas.style.top = top+"px";
+    canvas.style.left = left + "px";
+    canvas.style.top = top + "px";
     canvas.style.zIndex = "1";
     canvas.width = data.boarddim;
     canvas.height = data.boarddim;
-    
+
     canvasPlayers.style.position = "absolute";
-    canvasPlayers.style.left = left+"px";
-    canvasPlayers.style.top = top+"px";
+    canvasPlayers.style.left = left + "px";
+    canvasPlayers.style.top = top + "px";
     canvasPlayers.style.zIndex = "2";
     canvasPlayers.width = data.boarddim;
     canvasPlayers.height = data.boarddim;
 
     canvasMouse.style.position = "absolute";
-    canvasMouse.style.left = left+"px";
-    canvasMouse.style.top = top+"px";
+    canvasMouse.style.left = left + "px";
+    canvasMouse.style.top = top + "px";
     canvasMouse.style.zIndex = "3";
     canvasMouse.width = data.boarddim;
     canvasMouse.height = data.boarddim;
-    
-    
+
+
     data.canvas = canvas;
     data.canvasPlayers = canvasPlayers;
     data.canvasMouse = canvasMouse;
@@ -104,7 +104,7 @@ function init() {
 
 function prepareMap(boarddim) {
     var map = [];
-    start = parseFloat(boarddim) * .03;
+    start = parseFloat(boarddim) * .06;
     end = parseFloat(boarddim) - start;
 
     console.log({ start: start, end: end });
@@ -191,6 +191,10 @@ function preparePlayers() {
 }
 
 function drawPlayers(ctx, map) {
+
+    ctx.clearRect(0, 0, data.canvasPlayers.width, data.canvasPlayers.height);
+    ctx.beginPath();
+
     // bagh
 
     ctx.fillStyle = "red";
@@ -212,6 +216,8 @@ function drawPlayers(ctx, map) {
     // fill the circle with the current fill color
     ctx.fill();
 
+
+    // Bakri
     ctx.fillStyle = "#581ED2";
     ctx.lineWidth = 3;
     var cout6 = 0;
@@ -249,6 +255,17 @@ function handleStart(event) {
     var x = event.touches[0].pageX - canvas.offsetLeft;
     var y = event.touches[0].pageY - canvas.offsetTop;
     console.log("Touch started at (" + x + "," + y + ")");
+    var pos = findClickPos(x, y);
+    if (pos < 0) return;
+
+    drawMouseTracker(pos);
+
+
+    if (bagh.active) {
+        moveBagh(pos);
+    } else {
+        moveBakri(pos);
+    }
 }
 
 function handleMove(event) {
@@ -267,59 +284,468 @@ function handleClick(event) {
     var x = event.clientX - data.canvas.offsetLeft;
     var y = event.clientY - data.canvas.offsetTop;
     console.log("Click at (" + x + "," + y + ")");
-    var pos = findClickPos(x,y);
+    var pos = findClickPos(x, y);
+    if (pos < 0) return;
 
     drawMouseTracker(pos);
 
-    if(bagh.active){
+
+    if (bagh.active) {
         moveBagh(pos);
-    }else{
+    } else {
         moveBakri(pos);
     }
 
-    if(pos<0) return;
-    
+
+
 }
 
-function findClickPos(x,y){
-    for(let i=0;i<data.map.length;i++){
-        if(x>data.map[i].x-data.discSize && y>data.map[i].y-data.discSize){
-            let dis = Math.sqrt( Math.pow(data.map[i].y - y,2) + Math.pow(data.map[i].x - x,2) );
-            if(dis<data.discSize){
+function findClickPos(x, y) {
+    for (let i = 0; i < data.map.length; i++) {
+        if (x > data.map[i].x - data.discSize && y > data.map[i].y - data.discSize) {
+            let dis = Math.sqrt(Math.pow(data.map[i].y - y, 2) + Math.pow(data.map[i].x - x, 2));
+            if (dis < data.discSize) {
                 console.log(i);
                 return i;
-            } 
+            }
         }
     }
     return -1;
 }
 
-function drawMouseTracker(pos){
+function drawMouseTracker(pos) {
     var ctx = data.canvasMouse.getContext("2d");
 
     var flag = true;
-    
-    if(bagh.active){
-        if(bagh.bg1==pos) flag=false;
-        if(bagh.bg2==pos) flag=false;
+
+    if (bagh.active) {
+        if (bagh.bg1 == pos) flag = false;
+        if (bagh.bg2 == pos) flag = false;
         ctx.strokeStyle = "coral";
-    } 
-    else{
-        if (bakri.includes(pos)) flag=false;
+    }
+    else {
+        if (bakri.includes(pos)) flag = false;
         ctx.strokeStyle = "yellow";
     }
-    if(flag) return;
+    if (flag) return;
     ctx.lineWidth = 3;
 
     // Draw the circle outline
     ctx.clearRect(0, 0, data.canvasMouse.width, data.canvasMouse.height);
     ctx.beginPath();
-    ctx.arc(data.map[pos].x, data.map[pos].y, data.discSize+5, 0, 2 * Math.PI);
+    ctx.arc(data.map[pos].x, data.map[pos].y, data.discSize + 5, 0, 2 * Math.PI);
     ctx.stroke();
 }
 
-function moveBakri(){
+function clearMouseTracker(){
+    var ctx = data.canvasMouse.getContext("2d");
+    ctx.clearRect(0, 0, data.canvasMouse.width, data.canvasMouse.height);
+}
 
+function moveBakri(pos) {
+
+    if (bakri.includes(pos)) {
+        action.pos1 = pos;
+    } else if (action.pos1 != null && bakri.includes(action.pos1)) {
+        if (validateMovement(action.pos1, pos)) {
+            const index = bakri.indexOf(action.pos1);
+            if (index !== -1) {
+                bakri.splice(index, 1);
+                bakri.push(pos);
+                var ctxPlayers = data.canvasPlayers.getContext("2d");
+                drawPlayers(ctxPlayers, data.map);
+                action.pos1 = null;
+                clearMouseTracker();
+                bagh.active = true;
+            }
+        }
+    }else{}
+
+}
+
+function moveBagh(pos){
+    if (bagh.bg1 == pos || bagh.bg2 == pos) {
+        action.pos1 = pos;
+    } else if (action.pos1 != null && (bagh.bg1 == action.pos1 || bagh.bg2 == action.pos1)) {
+        if (validateMovement(action.pos1, pos)) {
+            if(bagh.bg1 == action.pos1) bagh.bg1 = pos;
+            if(bagh.bg2 == action.pos1) bagh.bg2 = pos;
+            var ctxPlayers = data.canvasPlayers.getContext("2d");
+            drawPlayers(ctxPlayers, data.map);
+            action.pos1 = null;
+            clearMouseTracker();
+            bagh.active = false;
+            
+        }
+        if(action.pos1!=null && pos !=null && action.pos1!=pos){
+            var posBk = eatBakri(pos);
+            if(posBk<0) return;
+            if(bakri.includes(posBk)){
+                if(bagh.bg1 == action.pos1) bagh.bg1 = pos;
+                if(bagh.bg2 == action.pos1) bagh.bg2 = pos;
+                const index = bakri.indexOf(posBk);
+                if (index !== -1) {
+                    bakri.splice(index, 1);
+                }
+                var ctxPlayers = data.canvasPlayers.getContext("2d");
+                drawPlayers(ctxPlayers, data.map);
+                action.pos1 = null;
+                clearMouseTracker();
+                bagh.active = false;
+            }
+        }
+    }
+}
+
+function validateMovement(posFrom, posTo) {
+    var flag = false;
+    if (bagh.active) {
+        switch (posFrom) {
+            case 0:
+                flag = (posTo == 1 || posTo == 5);
+                break;
+            case 1:
+                flag = (posTo == 0 || posTo == 6 || posTo == 2);
+                break;
+            case 2:
+                flag = (posTo == 1 || posTo == 6 || posTo == 7 || posTo == 8 || posTo == 3);
+                break;
+            case 3:
+                flag = (posTo == 2 || posTo == 8 || posTo == 4);
+                break;
+            case 4:
+                flag = (posTo == 3 || posTo == 9);
+                break;
+            case 5:
+                flag = (posTo == 0 || posTo == 6 || posTo == 10);
+                break;
+            case 6:
+                flag = (posTo == 1 || posTo == 2 || posTo == 7 || posTo == 11 || posTo == 10 || posTo == 5);
+                break;
+            case 7:
+                flag = (posTo == 2 || posTo == 8 || posTo == 12 || posTo == 6);
+                break;
+            case 8:
+                flag = (posTo == 2 || posTo == 3 || posTo == 9 || posTo == 14 || posTo == 13 || posTo == 7);
+                break;
+            case 9:
+                flag = (posTo == 4 || posTo == 14 || posTo == 8);
+                break;
+            case 10:
+                flag = (posTo == 5 || posTo == 6 || posTo == 11 || posTo == 16 || posTo == 15);
+                break;
+            case 11:
+                flag = (posTo == 6 || posTo == 12 || posTo == 16 || posTo == 10);
+                break;
+            case 12:
+                flag = (posTo == 7 || posTo == 13 || posTo == 17 || posTo == 11);
+                break;
+            case 13:
+                flag = (posTo == 8 || posTo == 14 || posTo == 18 || posTo == 12);
+                break;
+            case 14:
+                flag = (posTo == 8 || posTo == 9 || posTo == 19 || posTo == 18 || posTo == 13);
+                break;
+            case 15:
+                flag = (posTo == 10 || posTo == 16 || posTo == 20);
+                break;
+            case 16:
+                flag = (posTo == 10 || posTo == 11 || posTo == 17 || posTo == 22 || posTo == 21 || posTo == 15);
+                break;
+            case 17:
+                flag = (posTo == 12 || posTo == 18 || posTo == 22 || posTo == 16);
+                break;
+            case 18:
+                flag = (posTo == 13 || posTo == 14 || posTo == 19 || posTo == 23 || posTo == 22 || posTo == 17);
+                break;
+            case 19:
+                flag = (posTo == 14 || posTo == 24 || posTo == 18);
+                break;
+            case 20:
+                flag = (posTo == 15 || posTo == 21);
+                break;
+            case 21:
+                flag = (posTo == 16 || posTo == 22 || posTo == 20);
+                break;
+            case 22:
+                flag = (posTo == 16 || posTo == 17 || posTo == 18 || posTo == 23 || posTo == 21);
+                break;
+            case 23:
+                flag = (posTo == 18 || posTo == 24 || posTo == 22);
+                break;
+            case 24:
+                flag = (posTo == 19 || posTo == 23);
+                break;
+        }
+    
+        if (flag) {
+            if (bakri.includes(posTo)) flag = false;
+            if (bagh.bg1 == posTo) flag = false;
+            if (bagh.bg2 == posTo) flag = false;
+        }
+    } else {
+        switch (posFrom) {
+            case 0:
+                flag = (posTo == 1 || posTo == 5);
+                break;
+            case 1:
+                flag = (posTo == 0 || posTo == 6 || posTo == 2);
+                break;
+            case 2:
+                flag = (posTo == 1 || posTo == 6 || posTo == 7 || posTo == 8 || posTo == 3);
+                break;
+            case 3:
+                flag = (posTo == 2 || posTo == 8 || posTo == 4);
+                break;
+            case 4:
+                flag = (posTo == 3 || posTo == 9);
+                break;
+            case 5:
+                flag = (posTo == 0 || posTo == 6 || posTo == 10);
+                break;
+            case 6:
+                flag = (posTo == 1 || posTo == 2 || posTo == 7 || posTo == 11 || posTo == 10 || posTo == 5);
+                break;
+            case 7:
+                flag = (posTo == 2 || posTo == 8 || posTo == 12 || posTo == 6);
+                break;
+            case 8:
+                flag = (posTo == 2 || posTo == 3 || posTo == 9 || posTo == 14 || posTo == 13 || posTo == 7);
+                break;
+            case 9:
+                flag = (posTo == 4 || posTo == 14 || posTo == 8);
+                break;
+            case 10:
+                flag = (posTo == 5 || posTo == 6 || posTo == 11 || posTo == 16 || posTo == 15);
+                break;
+            case 11:
+                flag = (posTo == 6 || posTo == 12 || posTo == 16 || posTo == 10);
+                break;
+            case 12:
+                flag = (posTo == 7 || posTo == 13 || posTo == 17 || posTo == 11);
+                break;
+            case 13:
+                flag = (posTo == 8 || posTo == 14 || posTo == 18 || posTo == 12);
+                break;
+            case 14:
+                flag = (posTo == 8 || posTo == 9 || posTo == 19 || posTo == 18 || posTo == 13);
+                break;
+            case 15:
+                flag = (posTo == 10 || posTo == 16 || posTo == 20);
+                break;
+            case 16:
+                flag = (posTo == 10 || posTo == 11 || posTo == 17 || posTo == 22 || posTo == 21 || posTo == 15);
+                break;
+            case 17:
+                flag = (posTo == 12 || posTo == 18 || posTo == 22 || posTo == 16);
+                break;
+            case 18:
+                flag = (posTo == 13 || posTo == 14 || posTo == 19 || posTo == 23 || posTo == 22 || posTo == 17);
+                break;
+            case 19:
+                flag = (posTo == 14 || posTo == 24 || posTo == 18);
+                break;
+            case 20:
+                flag = (posTo == 15 || posTo == 21);
+                break;
+            case 21:
+                flag = (posTo == 16 || posTo == 22 || posTo == 20);
+                break;
+            case 22:
+                flag = (posTo == 16 || posTo == 17 || posTo == 18 || posTo == 23 || posTo == 21);
+                break;
+            case 23:
+                flag = (posTo == 18 || posTo == 24 || posTo == 22);
+                break;
+            case 24:
+                flag = (posTo == 19 || posTo == 23);
+                break;
+        }
+
+        if (flag) {
+            if (bakri.includes(posTo)) flag = false;
+            if (bagh.bg1 == posTo) flag = false;
+            if (bagh.bg2 == posTo) flag = false;
+        }
+    }
+
+    return flag;
+}
+
+function eatBakri(pos){
+    var posBk=-1;
+    switch(action.pos1){
+        case 0:
+            switch(pos){
+                case 2: posBk = 1; break;
+                case 10: posBk = 5; break;
+            }
+        break;
+        case 1:
+            switch(pos){
+                case 3: posBk = 2; break;
+                case 11: posBk = 6; break;
+            }
+        break;
+        case 2:
+            switch(pos){
+                case 0: posBk = 1; break;
+                case 4: posBk = 3; break;
+                case 14: posBk = 8; break;
+                case 12: posBk = 7; break;
+                case 10: posBk = 6; break;
+            }
+        break;
+        case 3:
+            switch(pos){
+                case 1: posBk = 2; break;
+                case 13: posBk = 8; break;
+            }
+        break;
+        case 4:
+            switch(pos){
+                case 2: posBk = 3; break;
+                case 14: posBk = 9; break;
+            }
+        break;
+        case 5:
+            switch(pos){
+                case 7: posBk = 6; break;
+                case 15: posBk = 10; break;
+            }
+        break;
+        case 6:
+            switch(pos){
+                case 8: posBk = 7; break;
+                case 16: posBk = 11; break;
+            }
+        break;
+        case 7:
+            switch(pos){
+                case 5: posBk = 6; break;
+                case 9: posBk = 8; break;
+                case 17: posBk = 12; break;
+            }
+        break;
+        case 8:
+            switch(pos){
+                case 6: posBk = 7; break;
+                case 18: posBk = 13; break;
+            }
+        break;
+        case 9:
+            switch(pos){
+                case 7: posBk = 8; break;
+                case 19: posBk = 14; break;
+            }
+        break;
+        case 10:
+            switch(pos){
+                case 0: posBk = 5; break;
+                case 2: posBk = 6; break;
+                case 12: posBk = 11; break;
+                case 22: posBk = 16; break;
+                case 20: posBk = 15; break;
+            }
+        break;
+        case 11:
+            switch(pos){
+                case 1: posBk = 6; break;
+                case 13: posBk = 12; break;
+                case 21: posBk = 16; break;
+            }
+        break;
+        case 12:
+            switch(pos){
+                case 2: posBk = 7; break;
+                case 14: posBk = 13; break;
+                case 22: posBk = 17; break;
+                case 10: posBk = 11; break;
+            }
+        break;
+        case 13:
+            switch(pos){
+                case 3: posBk = 8; break;
+                case 23: posBk = 18; break;
+                case 11: posBk = 12; break;
+            }
+        break;
+        case 14:
+            switch(pos){
+                case 2: posBk = 8; break;
+                case 4: posBk = 9; break;
+                case 12: posBk = 13; break;
+                case 22: posBk = 18; break;
+                case 24: posBk = 19; break;
+            }
+        break;
+        case 15:
+            switch(pos){
+                case 5: posBk = 10; break;
+                case 17: posBk = 16; break;
+            }
+        break;
+        case 16:
+            switch(pos){
+                case 6: posBk = 11; break;
+                case 18: posBk = 17; break;
+            }
+        break;
+        case 17:
+            switch(pos){
+                case 15: posBk = 16; break;
+                case 7: posBk = 12; break;
+                case 19: posBk = 18; break;
+            }
+        break;
+        case 18:
+            switch(pos){
+                case 16: posBk = 17; break;
+                case 8: posBk = 13; break;
+            }
+        break;
+        case 19:
+            switch(pos){
+                case 17: posBk = 18; break;
+                case 9: posBk = 14; break;
+            }
+        break;
+        case 20:
+            switch(pos){
+                case 10: posBk = 15; break;
+                case 22: posBk = 21; break;
+            }
+        break;
+        case 21:
+            switch(pos){
+                case 11: posBk = 16; break;
+                case 23: posBk = 22; break;
+            }
+        break;
+        case 22:
+            switch(pos){
+                case 20: posBk = 21; break;
+                case 10: posBk = 16; break;
+                case 12: posBk = 17; break;
+                case 14: posBk = 18; break;
+                case 24: posBk = 23; break;
+            }
+        break;
+        case 23:
+            switch(pos){
+                case 21: posBk = 22; break;
+                case 13: posBk = 18; break;
+            }
+        break;
+        case 24:
+            switch(pos){
+                case 22: posBk = 23; break;
+                case 14: posBk = 19; break;
+            }
+        break;
+    }
+
+    return posBk;
 }
 
 init();
